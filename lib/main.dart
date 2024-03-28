@@ -26,14 +26,17 @@ class PomodoroScreen extends StatefulWidget {
 }
 
 class _PomodoroScreenState extends State<PomodoroScreen> {
-  int _pomodoroDuration = 25;
-  int _shortBreakDuration = 5;
-  int _longBreakDuration = 10;
+  int _pomodoroDuration = 3;
+  int _shortBreakDuration = 1;
+  int _longBreakDuration = 2;
 
   int _remainingTime = 0;
   bool _isWorking = true;
   int _completedCycles = 0;
   int _cyclesUntilLongBreak = 4;
+  bool _isPomodoroSelected = true;
+  bool _isShortBreakSelected = false;
+  bool _isLongBreakSelected = false;
 
   late FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin;
 
@@ -48,51 +51,73 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   }
 
   void _startTimer() {
-  _remainingTime = _pomodoroDuration * 60; // Set the initial remaining time to Pomodoro duration
-
-  Timer.periodic(Duration(seconds: 1), (timer) {
-    setState(() {
-      if (_remainingTime <= 0) {
-        timer.cancel();
-        _handleIntervalCompletion(); // Handle interval completion when Pomodoro time is up
-      } else {
-        _remainingTime--;
-      }
-    });
-  });
-}
-
-void _handleIntervalCompletion() {
-  _showNotification(
-    _isWorking ? 'Pomodoro Finished' : 'Break Finished',
-    _isWorking ? 'Time for a short break!' : 'Time to get back to work!',
-  );
-
-  if (_isWorking) {
-    _completedCycles++;
-    if (_completedCycles >= _cyclesUntilLongBreak) {
-      _isWorking = false;
-      _completedCycles = 0;
-      _remainingTime = _longBreakDuration * 60; // Set remaining time to Long Break duration
-    } else {
-      _isWorking = false;
-      _remainingTime = _shortBreakDuration * 60; // Set remaining time to Short Break duration
+    if (_isWorking) {
+      _remainingTime = _pomodoroDuration * 60;
+      _shortBreakDuration * 60;
     }
-  } else {
-    _isWorking = true;
-    _remainingTime = _pomodoroDuration * 60; // Set remaining time to Pomodoro duration
+    // Set the initial remaining time to Pomodoro duration
+
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_remainingTime <= 0) {
+          timer.cancel();
+          _handleIntervalCompletion(); // Handle interval completion when Pomodoro time is up
+        } else {
+          _remainingTime--;
+        }
+      });
+    });
   }
 
-  _startTimer(); // Start the next interval
-}
+  void _handleIntervalCompletion() {
+    _showNotification(
+      _isWorking ? 'Pomodoro Finished' : 'Break Finished',
+      _isWorking ? 'Time for a short break!' : 'Time to get back to work!',
+    );
+
+    if (_isWorking) {
+      _completedCycles++;
+      if (_completedCycles >= _cyclesUntilLongBreak) {
+        _isWorking = false;
+
+        _remainingTime = _longBreakDuration *
+            60; // Set remaining time to Long Break duration
+      } else {
+        _isWorking = false;
+        _remainingTime = _shortBreakDuration *
+            60; // Set remaining time to Short Break duration
+      }
+    } else {
+      _isWorking = true;
+      _remainingTime =
+          _pomodoroDuration * 60; // Set remaining time to Pomodoro duration
+    }
+
+    _startTimer(); // Start the next interval
+  }
 
   void _resetTimer() {
-  setState(() {
-    _isWorking = true; // Đảm bảo rằng khi reset, chương trình bắt đầu với Pomodoro
-    _completedCycles = 0;
-    _remainingTime = _isWorking ? _pomodoroDuration * 60 : _shortBreakDuration * 60; // Sử dụng _shortBreakDuration nếu đang trong thời gian Short Break
-  });
-}
+    setState(() {
+      _completedCycles = 0;
+      if (_isWorking) {
+        _remainingTime = _pomodoroDuration * 60;
+      } else {
+        if (_completedCycles >= _cyclesUntilLongBreak) {
+          _remainingTime = _longBreakDuration * 60;
+        } else {
+          _remainingTime = _shortBreakDuration * 60;
+        }
+      }
+      // Cập nhật trạng thái của các nút chuyển đổi
+      _isPomodoroSelected = _isWorking;
+      _isShortBreakSelected =
+          !_isWorking && _completedCycles < _cyclesUntilLongBreak;
+      _isLongBreakSelected =
+          !_isWorking && _completedCycles >= _cyclesUntilLongBreak;
+    });
+
+    _handleIntervalCompletion();
+  }
 
   void _configureDurations() {
     // Implement dialog to configure durations if needed
@@ -119,9 +144,13 @@ void _handleIntervalCompletion() {
                 children: [
                   _buildButton('Pomodoro', isSelected: _isWorking),
                   SizedBox(width: 10),
-                  _buildButton('Short Break', isSelected: !_isWorking),
+                  _buildButton('Short Break',
+                      isSelected: !_isWorking &&
+                          _completedCycles < _cyclesUntilLongBreak),
                   SizedBox(width: 10),
-                  _buildButton('Long Break'),
+                  _buildButton('Long Break',
+                      isSelected: !_isWorking &&
+                          _completedCycles >= _cyclesUntilLongBreak),
                 ],
               ),
               SizedBox(height: 20),
@@ -170,29 +199,63 @@ void _handleIntervalCompletion() {
   }
 
   Widget _buildButton(String text, {bool isSelected = false}) {
-  return ElevatedButton(
-    onPressed: () {
-      setState(() {
-        if (text == 'Pomodoro') {
-          _isWorking = true;
-        } else if (text == 'Short Break') {
-          _isWorking = false;
-        }
-        _resetTimer(); // Thiết lập lại timer khi chuyển sang Pomodoro hoặc Short Break mới
-      });
-    },
-    child: Text(
-      text,
-      style: TextStyle(color: isSelected ? Colors.white : Colors.black),
-    ),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: isSelected ? Colors.red : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+    bool isPomodoro = text == 'Pomodoro';
+    bool isShortBreak = text == 'Short Break';
+    bool isLongBreak = text == 'Long Break';
+    return ElevatedButton(
+      onPressed: () {
+        setState(() {
+          if (text == 'Pomodoro') {
+            _isWorking = true;
+            _isPomodoroSelected = true;
+            _isShortBreakSelected = false;
+            _isLongBreakSelected = false;
+          } else if (text == 'Short Break') {
+            _isWorking = false;
+            _isPomodoroSelected = false;
+            _isShortBreakSelected = true;
+            _isLongBreakSelected = false;
+          } else if (text == 'Long Break') {
+            _isWorking = false;
+            _isPomodoroSelected = false;
+            _isShortBreakSelected = false;
+            _isLongBreakSelected = true;
+          }
+          _resetTimer();
+        });
+      },
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isPomodoro
+              ? _isPomodoroSelected
+                  ? Colors.white
+                  : Colors.black
+              : isShortBreak
+                  ? _isShortBreakSelected
+                      ? Colors.white
+                      : Colors.black
+                  : _isLongBreakSelected
+                      ? Colors.white
+                      : Colors.black,
+        ),
       ),
-    ),
-  );
-}
-
-
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isPomodoro
+            ? _isPomodoroSelected
+                ? Colors.red
+                : Colors.white
+            : isShortBreak
+                ? _isShortBreakSelected
+                    ? Colors.green
+                    : Colors.white
+                : _isLongBreakSelected
+                    ? Colors.blue
+                    : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    );
+  }
 }
