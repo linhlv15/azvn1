@@ -26,11 +26,9 @@ class PomodoroScreen extends StatefulWidget {
 }
 
 class _PomodoroScreenState extends State<PomodoroScreen> {
-  int _pomodoroDuration = 3;
-  int _shortBreakInitialDuration = 1; // Giá trị ban đầu của Short Break
-  int _longBreakInitialDuration = 2;
-  int _shortBreakDuration = 1;
-  int _longBreakDuration = 2;
+  int _pomodoroDuration = 25; // Thay đổi giá trị mặc định cho pomodoro
+  int _shortBreakDuration = 5; // Thay đổi giá trị mặc định cho short break
+  int _longBreakDuration = 15; // Thay đổi giá trị mặc định cho long break
   int _pausedTime = 0;
   int _currentBreakDuration = 0;
 
@@ -56,17 +54,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   }
 
   void _startTimer() {
-    if (_isWorking) {
-      _remainingTime = _pomodoroDuration * 60;
-    } else {
-      if (_completedCycles >= _cyclesUntilLongBreak) {
-        _remainingTime = _longBreakDuration * 60;
-      } else {
-        _remainingTime = _shortBreakDuration * 60;
-      }
-    }
+    _remainingTime =
+        _isWorking ? _pomodoroDuration * 60 : _currentBreakDuration;
+
     _isTimerRunning = true;
-    // Set the initial remaining time to Pomodoro duration
 
     Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
@@ -92,7 +83,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   void _resumeTimer() {
     setState(() {
       _isTimerRunning = true;
-
       _startCountdown();
     });
   }
@@ -122,13 +112,10 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       _completedCycles++;
       if (_completedCycles >= _cyclesUntilLongBreak) {
         _isWorking = false;
-
-        _currentBreakDuration = _longBreakDuration *
-            60; // Sử dụng _longBreakDuration thay vì _longBreakInitialDuration
+        _currentBreakDuration = _longBreakDuration * 60;
       } else {
         _isWorking = false;
-        _currentBreakDuration = _shortBreakDuration *
-            60; // Sử dụng _shortBreakDuration thay vì _shortBreakInitialDuration
+        _currentBreakDuration = _shortBreakDuration * 60;
       }
     } else {
       _isWorking = true;
@@ -136,31 +123,106 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     }
 
     _startTimer();
+
+    // Cập nhật trạng thái của các nút
+    setState(() {
+      _isPomodoroSelected = _isWorking;
+      _isShortBreakSelected =
+          !_isWorking && _completedCycles < _cyclesUntilLongBreak;
+      _isLongBreakSelected =
+          !_isWorking && _completedCycles >= _cyclesUntilLongBreak;
+    });
   }
 
   // Các phương thức và thuộc tính khác không thay đổi
 
   void _resetTimer() {
     setState(() {
-      _completedCycles = 0;
-      _shortBreakDuration =
-          _shortBreakInitialDuration; // Reset Short Break duration về giá trị ban đầu
-      _longBreakDuration =
-          _longBreakInitialDuration; // Reset Long Break duration về giá trị ban đầu
-      _currentBreakDuration = 0; // Reset thời gian của Break đang chạy về 0
+      // Kiểm tra nếu thời gian đang chạy ở pomodoro
       if (_isWorking) {
-        _remainingTime = _pomodoroDuration * 60;
-      } else {
-        if (_completedCycles >= _cyclesUntilLongBreak) {
-          _remainingTime = _longBreakDuration * 60;
-        } else {
-          _remainingTime = _shortBreakDuration * 60;
-        }
+        _remainingTime =
+            _pomodoroDuration * 60; // Reset lại thời gian của pomodoro
+      }
+      // Kiểm tra nếu thời gian đang chạy ở short break
+      else if (_isShortBreakSelected) {
+        _remainingTime =
+            _shortBreakDuration * 60; // Reset lại thời gian của short break
+      }
+      // Kiểm tra nếu thời gian đang chạy ở long break
+      else if (_isLongBreakSelected) {
+        _remainingTime =
+            _longBreakDuration * 60; // Reset lại thời gian của long break
+      }
+
+      // Kiểm tra xem nếu thời gian đang chạy
+      if (_isTimerRunning) {
+        _isTimerRunning = false; // Dừng thời gian
       }
     });
   }
 
+  void _showConfigurationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Configure Durations'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration:
+                    InputDecoration(labelText: 'Pomodoro Duration (minutes)'),
+                keyboardType: TextInputType.number,
+                initialValue: _pomodoroDuration.toString(),
+                onChanged: (value) {
+                  setState(() {
+                    _pomodoroDuration =
+                        int.tryParse(value) ?? _pomodoroDuration;
+                  });
+                },
+              ),
+              TextFormField(
+                decoration: InputDecoration(
+                    labelText: 'Short Break Duration (minutes)'),
+                keyboardType: TextInputType.number,
+                initialValue: _shortBreakDuration.toString(),
+                onChanged: (value) {
+                  setState(() {
+                    _shortBreakDuration =
+                        int.tryParse(value) ?? _shortBreakDuration;
+                  });
+                },
+              ),
+              TextFormField(
+                decoration:
+                    InputDecoration(labelText: 'Long Break Duration (minutes)'),
+                keyboardType: TextInputType.number,
+                initialValue: _longBreakDuration.toString(),
+                onChanged: (value) {
+                  setState(() {
+                    _longBreakDuration =
+                        int.tryParse(value) ?? _longBreakDuration;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _configureDurations() {
+    _showConfigurationDialog(context);
     // Implement dialog to configure durations if needed
   }
 
@@ -183,15 +245,12 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildButton('Pomodoro', isSelected: _isWorking),
+                  _buildButton('Pomodoro', isSelected: _isPomodoroSelected),
                   SizedBox(width: 10),
                   _buildButton('Short Break',
-                      isSelected: !_isWorking &&
-                          _completedCycles < _cyclesUntilLongBreak),
+                      isSelected: _isShortBreakSelected),
                   SizedBox(width: 10),
-                  _buildButton('Long Break',
-                      isSelected: !_isWorking &&
-                          _completedCycles >= _cyclesUntilLongBreak),
+                  _buildButton('Long Break', isSelected: _isLongBreakSelected),
                 ],
               ),
               SizedBox(height: 20),
@@ -243,10 +302,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     );
   }
 
-  Widget _buildButton(String text, {bool isSelected = false}) {
-    bool isPomodoro = text == 'Pomodoro';
-    bool isShortBreak = text == 'Short Break';
-    bool isLongBreak = text == 'Long Break';
+  Widget _buildButton(String text, {required bool isSelected}) {
     return ElevatedButton(
       onPressed: () {
         setState(() {
@@ -275,31 +331,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       child: Text(
         text,
         style: TextStyle(
-          color: isPomodoro
-              ? _isPomodoroSelected
-                  ? Colors.white
-                  : Colors.black
-              : isShortBreak
-                  ? _isShortBreakSelected
-                      ? Colors.white
-                      : Colors.black
-                  : _isLongBreakSelected
-                      ? Colors.white
-                      : Colors.black,
+          color: isSelected ? Colors.white : Colors.black,
         ),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: isPomodoro
-            ? _isPomodoroSelected
-                ? Colors.red
-                : Colors.white
-            : isShortBreak
-                ? _isShortBreakSelected
-                    ? Colors.green
-                    : Colors.white
-                : _isLongBreakSelected
-                    ? Colors.blue
-                    : Colors.white,
+        backgroundColor: isSelected ? Colors.blue : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
