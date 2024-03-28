@@ -27,9 +27,12 @@ class PomodoroScreen extends StatefulWidget {
 
 class _PomodoroScreenState extends State<PomodoroScreen> {
   int _pomodoroDuration = 3;
+  int _shortBreakInitialDuration = 1; // Giá trị ban đầu của Short Break
+  int _longBreakInitialDuration = 2;
   int _shortBreakDuration = 1;
   int _longBreakDuration = 2;
   int _pausedTime = 0;
+  int _currentBreakDuration = 0;
 
   int _remainingTime = 0;
   bool _isWorking = true;
@@ -89,7 +92,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   void _resumeTimer() {
     setState(() {
       _isTimerRunning = true;
-      _remainingTime = _pausedTime;
+
       _startCountdown();
     });
   }
@@ -120,25 +123,31 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       if (_completedCycles >= _cyclesUntilLongBreak) {
         _isWorking = false;
 
-        _remainingTime = _longBreakDuration *
-            60; // Set remaining time to Long Break duration
+        _currentBreakDuration = _longBreakDuration *
+            60; // Sử dụng _longBreakDuration thay vì _longBreakInitialDuration
       } else {
         _isWorking = false;
-        _remainingTime = _shortBreakDuration *
-            60; // Set remaining time to Short Break duration
+        _currentBreakDuration = _shortBreakDuration *
+            60; // Sử dụng _shortBreakDuration thay vì _shortBreakInitialDuration
       }
     } else {
       _isWorking = true;
-      _remainingTime =
-          _pomodoroDuration * 60; // Set remaining time to Pomodoro duration
+      _remainingTime = _pomodoroDuration * 60;
     }
 
-    _startTimer(); // Start the next interval
+    _startTimer();
   }
+
+  // Các phương thức và thuộc tính khác không thay đổi
 
   void _resetTimer() {
     setState(() {
       _completedCycles = 0;
+      _shortBreakDuration =
+          _shortBreakInitialDuration; // Reset Short Break duration về giá trị ban đầu
+      _longBreakDuration =
+          _longBreakInitialDuration; // Reset Long Break duration về giá trị ban đầu
+      _currentBreakDuration = 0; // Reset thời gian của Break đang chạy về 0
       if (_isWorking) {
         _remainingTime = _pomodoroDuration * 60;
       } else {
