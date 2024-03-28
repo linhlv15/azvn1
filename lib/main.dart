@@ -29,6 +29,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   int _pomodoroDuration = 3;
   int _shortBreakDuration = 1;
   int _longBreakDuration = 2;
+  int _pausedTime = 0;
 
   int _remainingTime = 0;
   bool _isWorking = true;
@@ -37,6 +38,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   bool _isPomodoroSelected = true;
   bool _isShortBreakSelected = false;
   bool _isLongBreakSelected = false;
+  bool _isTimerRunning = false;
 
   late FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin;
 
@@ -53,15 +55,53 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   void _startTimer() {
     if (_isWorking) {
       _remainingTime = _pomodoroDuration * 60;
-      _shortBreakDuration * 60;
+    } else {
+      if (_completedCycles >= _cyclesUntilLongBreak) {
+        _remainingTime = _longBreakDuration * 60;
+      } else {
+        _remainingTime = _shortBreakDuration * 60;
+      }
     }
+    _isTimerRunning = true;
     // Set the initial remaining time to Pomodoro duration
 
     Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
-        if (_remainingTime <= 0) {
+        if (_remainingTime <= 0 || !_isTimerRunning) {
           timer.cancel();
-          _handleIntervalCompletion(); // Handle interval completion when Pomodoro time is up
+          if (_isTimerRunning) {
+            _handleIntervalCompletion();
+          } // Handle interval completion when Pomodoro time is up
+        } else {
+          _remainingTime--;
+        }
+      });
+    });
+  }
+
+  void _pauseTimer() {
+    setState(() {
+      _isTimerRunning = false;
+      _pausedTime = _remainingTime; // Cập nhật giá trị _pausedTime
+    });
+  }
+
+  void _resumeTimer() {
+    setState(() {
+      _isTimerRunning = true;
+      _remainingTime = _pausedTime;
+      _startCountdown();
+    });
+  }
+
+  void _startCountdown() {
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_remainingTime <= 0 || !_isTimerRunning) {
+          timer.cancel();
+          if (_isTimerRunning) {
+            _handleIntervalCompletion();
+          }
         } else {
           _remainingTime--;
         }
@@ -108,15 +148,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
           _remainingTime = _shortBreakDuration * 60;
         }
       }
-      // Cập nhật trạng thái của các nút chuyển đổi
-      _isPomodoroSelected = _isWorking;
-      _isShortBreakSelected =
-          !_isWorking && _completedCycles < _cyclesUntilLongBreak;
-      _isLongBreakSelected =
-          !_isWorking && _completedCycles >= _cyclesUntilLongBreak;
     });
-
-    _handleIntervalCompletion();
   }
 
   void _configureDurations() {
@@ -164,8 +196,12 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _startTimer,
-                child: Text('Start'),
+                onPressed: _isTimerRunning
+                    ? _pauseTimer
+                    : (_pausedTime > 0 ? _resumeTimer : _startTimer),
+                child: Text(_isTimerRunning
+                    ? 'Pause'
+                    : (_pausedTime > 0 ? 'Start' : 'Start')),
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.black,
                   backgroundColor: Colors.white,
@@ -205,6 +241,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     return ElevatedButton(
       onPressed: () {
         setState(() {
+          if (_isTimerRunning) {
+            _pauseTimer();
+          }
           if (text == 'Pomodoro') {
             _isWorking = true;
             _isPomodoroSelected = true;
