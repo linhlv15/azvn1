@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -24,15 +26,12 @@ class PomodoroScreen extends StatefulWidget {
 }
 
 class _PomodoroScreenState extends State<PomodoroScreen> {
-  // These are suggested initial values for the Pomodoro timer.
   int _pomodoroDuration = 25;
   int _shortBreakDuration = 5;
   int _longBreakDuration = 10;
 
   int _remainingTime = 0;
-
   bool _isWorking = true;
-
   int _completedCycles = 0;
   int _cyclesUntilLongBreak = 4;
 
@@ -45,30 +44,62 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   }
 
   void _initializeNotifications() {
-    // TODO: Initialize FlutterLocalNotificationsPlugin
+    // Initialize notifications here if needed
   }
 
   void _startTimer() {
-    // TODO: Implement the logic to start the timer
-    // Start the timer based on the selected mode (Pomodoro, Short Break, or Long Break).
-    // Use a timer or a periodic function to update the remaining time and trigger
-    // the appropriate actions when each interval is completed.
+  _remainingTime = _pomodoroDuration * 60; // Set the initial remaining time to Pomodoro duration
+
+  Timer.periodic(Duration(seconds: 1), (timer) {
+    setState(() {
+      if (_remainingTime <= 0) {
+        timer.cancel();
+        _handleIntervalCompletion(); // Handle interval completion when Pomodoro time is up
+      } else {
+        _remainingTime--;
+      }
+    });
+  });
+}
+
+void _handleIntervalCompletion() {
+  _showNotification(
+    _isWorking ? 'Pomodoro Finished' : 'Break Finished',
+    _isWorking ? 'Time for a short break!' : 'Time to get back to work!',
+  );
+
+  if (_isWorking) {
+    _completedCycles++;
+    if (_completedCycles >= _cyclesUntilLongBreak) {
+      _isWorking = false;
+      _completedCycles = 0;
+      _remainingTime = _longBreakDuration * 60; // Set remaining time to Long Break duration
+    } else {
+      _isWorking = false;
+      _remainingTime = _shortBreakDuration * 60; // Set remaining time to Short Break duration
+    }
+  } else {
+    _isWorking = true;
+    _remainingTime = _pomodoroDuration * 60; // Set remaining time to Pomodoro duration
   }
+
+  _startTimer(); // Start the next interval
+}
 
   void _resetTimer() {
-    // TODO: Implement the logic to reset the timer
-    // Reset the timer to its initial state, clearing any ongoing intervals and
-    // resetting the completed cycles count.
-  }
+  setState(() {
+    _isWorking = true; // Đảm bảo rằng khi reset, chương trình bắt đầu với Pomodoro
+    _completedCycles = 0;
+    _remainingTime = _isWorking ? _pomodoroDuration * 60 : _shortBreakDuration * 60; // Sử dụng _shortBreakDuration nếu đang trong thời gian Short Break
+  });
+}
 
   void _configureDurations() {
-    // TODO: Implement the logic to show dialog to configure durations
+    // Implement dialog to configure durations if needed
   }
 
   void _showNotification(String title, String body) {
-    // TODO: Implement the logic to show a local notification
-    // Display a local notification when each interval is completed, informing
-    // the user about the end of the Pomodoro, Short Break, or Long Break.
+    // Implement notification logic here
   }
 
   @override
@@ -86,33 +117,16 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Pomodoro, Short Break, and Long Break buttons
-                  // ----------------------------------------------
-                  // When user taps Pomodoro, it should be selected and pomodoro
-                  // counter should start.
-                  //
-                  // When counter reaches 0, a notification should be shown,
-                  //
-                  // If completed cycles is less than cycles until long break,
-                  // short break counter should start.
-                  // Otherwise, long break counter should start.
-                  _buildButton('pomodoro', isSelected: true),
+                  _buildButton('Pomodoro', isSelected: _isWorking),
                   SizedBox(width: 10),
-                  // When user taps Short Break, it should be selected and short break counter should start.
-                  //
-                  // When counter reaches 0, a notification should be shown,
-                  // and pomodoro counter should start again.
-                  _buildButton('short break'),
-                  // When user taps Long Break, it should be selected and long break counter should start.
-                  // When counter reaches 0, a notification should be shown,
-                  // and pomodoro counter should start again.
+                  _buildButton('Short Break', isSelected: !_isWorking),
                   SizedBox(width: 10),
-                  _buildButton('long break'),
+                  _buildButton('Long Break'),
                 ],
               ),
               SizedBox(height: 20),
               Text(
-                '25:00',
+                '${(_remainingTime ~/ 60).toString().padLeft(2, '0')}:${(_remainingTime % 60).toString().padLeft(2, '0')}',
                 style: TextStyle(
                   fontSize: 80,
                   color: Colors.white,
@@ -122,7 +136,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _startTimer,
-                child: Text('start'),
+                child: Text('Start'),
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.black,
                   backgroundColor: Colors.white,
@@ -156,23 +170,29 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   }
 
   Widget _buildButton(String text, {bool isSelected = false}) {
-    return ElevatedButton(
-      onPressed: () {
-        // TODO: Implement button functionality
-        // Implement the functionality for the "pomodoro", "short break", and
-        // "long break" buttons to switch between the different modes and
-        // update the timer accordingly.
-      },
-      child: Text(
-        text,
-        style: TextStyle(color: isSelected ? Colors.white : Colors.black),
+  return ElevatedButton(
+    onPressed: () {
+      setState(() {
+        if (text == 'Pomodoro') {
+          _isWorking = true;
+        } else if (text == 'Short Break') {
+          _isWorking = false;
+        }
+        _resetTimer(); // Thiết lập lại timer khi chuyển sang Pomodoro hoặc Short Break mới
+      });
+    },
+    child: Text(
+      text,
+      style: TextStyle(color: isSelected ? Colors.white : Colors.black),
+    ),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: isSelected ? Colors.red : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
       ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? Colors.red : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
+
+
 }
