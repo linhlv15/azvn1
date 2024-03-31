@@ -8,4 +8,4 @@ After reading the detailed instructions in the README files, I followed and comp
 - Can choose the type of notification sound and turn off the notification sound if the user does not want it.
 
 # Things learned through the project process
-After taking this test, I understood more things and encountered new things that I had never encountered before. Learned how a Pomodoro Timer works. I know how to use Vscode to practice with flutter framework and dart programming language to do tests.
+After taking this test, I understood more things and encountered new things that I had never encountered before. Learned how a Pomodoro Timer works. I know how to use Vscode to practice with flutter framework and dart programming language to do tests. As well as reviewing knowledge about how to use Git as well as knowing how to link between Git and VsCode.
