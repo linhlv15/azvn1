@@ -40,6 +40,8 @@
     bool _isShortBreakSelected = false;
     bool _isLongBreakSelected = false;
     bool _isTimerRunning = false;
+    bool _isLoopCompleted = false;
+
   late AudioPlayer _audioPlayer;
 
 
@@ -58,56 +60,56 @@
    //'tieng-chuong-het-gio-het-thoi-gian-trong-powerpoint-www_tiengdong_com.mp3'
   //];
   Map<String, String> _soundFilesMap = {
-  'Birds': 'Tieng-chim-hot-buoi-sang-www_tiengdong_com.mp3',
+  'Birds':'Tieng-chim-hot-buoi-sang-www_tiengdong_com(mp3cut.net).mp3',
   'Bell': 'tieng-chuong-het-gio-het-thoi-gian-trong-powerpoint-www_tiengdong_com.mp3',
 };
 
   String _selectedSoundFile = 'Birds';
-  
 
-    void _startTimer() {
-        if (_isPomodoroSelected) {
-      _remainingTime = _pomodoroDuration * 60;
-      _isWorking = true;
-    } else if (_isShortBreakSelected) {
-      _remainingTime = _shortBreakDuration * 60;
-      _isWorking = false;
-    } else if (_isLongBreakSelected) {
-      _remainingTime = _longBreakDuration * 60;
-      _isWorking = false;
-    }
-    _isTimerRunning = true;
+    Timer? _timer;
 
-      Timer.periodic(Duration(seconds: 1), (timer) {
-        setState(() {
-          if (_remainingTime <= 0 || !_isTimerRunning) {
-            timer.cancel();
-            if (_isTimerRunning) {
-              _handleIntervalCompletion();
-            } // Handle interval completion when Pomodoro time is up
-          } else {
-            _remainingTime--;
+void _startTimer() {
+  _isLoopCompleted = false;
+  if (_isPomodoroSelected) {
+    _remainingTime = _pomodoroDuration * 60;
+    _isWorking = true;
+  } else if (_isShortBreakSelected) {
+    _remainingTime = _shortBreakDuration * 60;
+    _isWorking = false;
+  } else if (_isLongBreakSelected) {
+    _remainingTime = _longBreakDuration * 60;
+    _isWorking = false;
+  }
+  _isTimerRunning = true;
+  if (_timer == null || !_timer!.isActive) {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_remainingTime <= 0 || !_isTimerRunning) {
+          timer.cancel();
+          if (_isTimerRunning) {
+            _handleIntervalCompletion();
           }
-        });
+        } else {
+          _remainingTime--;
+        }
       });
-    }
+    });
+  }
+}
 
-    void _pauseTimer() {
-      setState(() {
-        _isTimerRunning = false;
-        _pausedTime = _remainingTime; // Cập nhật giá trị _pausedTime
-      });
-    }
+void _pauseTimer() {
+  setState(() {
+    _isTimerRunning = false;
+    _timer?.cancel();
+    _pausedTime = _remainingTime;
+  });
+}
 
-    void _resumeTimer() {
-      setState(() {
-        _isTimerRunning = true;
-        _startCountdown();
-      });
-    }
-
-    void _startCountdown() {
-      Timer.periodic(Duration(seconds: 1), (timer) {
+void _resumeTimer() {
+  setState(() {
+    _isTimerRunning = true;
+    if (_timer == null || !_timer!.isActive) {
+      _timer = Timer.periodic(Duration(seconds: 1), (timer) {
         setState(() {
           if (_remainingTime <= 0 || !_isTimerRunning) {
             timer.cancel();
@@ -120,51 +122,88 @@
         });
       });
     }
+  });
+}
 
-    void _handleIntervalCompletion() {
-    _playNotificationSound();
-    if (_cyclesUntilLongBreak == 4) {
-      // Nếu vòng lặp được bật
-      if (_isWorking) {
-        _completedCycles++;
-        if (_completedCycles >= _cyclesUntilLongBreak) {
-          _isWorking = false;
-          _currentBreakDuration = _longBreakDuration * 60;
-          _completedCycles = 0;
+    void _startCountdown() {
+   if (!_isTimerRunning) {
+    _isTimerRunning = true;
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_remainingTime <= 0 || !_isTimerRunning) {
+          timer.cancel();
+          if (_isTimerRunning) {
+            _handleIntervalCompletion();
+          }
         } else {
-          _isWorking = false;
-          _currentBreakDuration = _shortBreakDuration * 60;
+          _remainingTime--;
         }
+      });
+    });
+  
+  }
+}
+
+   void _handleIntervalCompletion() {
+  _playNotificationSound();
+  if (_cyclesUntilLongBreak == 4) {
+    // Nếu vòng lặp được bật
+    if (_isWorking) {
+      _completedCycles++;
+      if (_completedCycles >= _cyclesUntilLongBreak) {
+        _isWorking = false;
+        _currentBreakDuration = _longBreakDuration * 60;
+        _completedCycles = 0;
+        _isLongBreakSelected = true;
+        _isPomodoroSelected = false;
+        _isShortBreakSelected = false;
+        _isLoopCompleted = true; // Đánh dấu vòng lặp đã hoàn thành
+        _startTimer(); // Bắt đầu Long Break
+      } else {
+        _isWorking = false;
+        _currentBreakDuration = _shortBreakDuration * 60;
+        _isShortBreakSelected = true;
+        _isPomodoroSelected = false;
+        _isLongBreakSelected = false;
+        _startTimer(); // Bắt đầu Short Break
+      }
+    } else {
+      if (_isLoopCompleted) {
+        // Nếu vòng lặp đã hoàn thành, dừng đồng hồ
+        _isTimerRunning = false;
+        _resetTimer();
       } else {
         _isWorking = true;
         _remainingTime = _pomodoroDuration * 60;
+        _isPomodoroSelected = true;
+        _isShortBreakSelected = false;
+        _isLongBreakSelected = false;
+        _startTimer(); // Bắt đầu Pomodoro mới
       }
-      _startTimer();
-    } else {
-      // Nếu vòng lặp được tắt
-      _isTimerRunning = false;
-      _resetTimer();
-      
-      // Cập nhật trạng thái của các nút
-      setState(() {
-        if (_isPomodoroSelected) {
-          _isPomodoroSelected = true;
-          _isShortBreakSelected = false;
-          _isLongBreakSelected = false;
-        } else if (_isShortBreakSelected) {
-          _isPomodoroSelected = false;
-          _isShortBreakSelected = true;
-          _isLongBreakSelected = false;
-        } else if (_isLongBreakSelected) {
-          _isPomodoroSelected = false;
-          _isShortBreakSelected = false;
-          _isLongBreakSelected = true;
-        }
-      });
-      }
+    }
+  } else {
+    // Nếu vòng lặp được tắt
+    _isTimerRunning = false;
+    _resetTimer();
     
+    // Cập nhật trạng thái của các nút
+    setState(() {
+      if (_isPomodoroSelected) {
+        _isPomodoroSelected = true;
+        _isShortBreakSelected = false;
+        _isLongBreakSelected = false;
+      } else if (_isShortBreakSelected) {
+        _isPomodoroSelected = false;
+        _isShortBreakSelected = true;
+        _isLongBreakSelected = false;
+      } else if (_isLongBreakSelected) {
+        _isPomodoroSelected = false;
+        _isShortBreakSelected = false;
+        _isLongBreakSelected = true;
+      }
+    });
   }
-
+}
     // Các phương thức và thuộc tính khác không thay đổi
 
     void _resetTimer() {
@@ -269,7 +308,10 @@
                                 ],
                               ),
                             ),
-                            Material(
+                            SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  Material(
                                     child: DropdownButton<String>(
                                       value: _selectedSoundFile,
                                       onChanged: (value) {
@@ -285,9 +327,6 @@
                                       }).toList(),
                                     ),
                                     ),
-                            SingleChildScrollView(
-                              child: Column(
-                                children: [
                                   SwitchListTile(
                                     title: Text('Enable Sound'),
                                     value: _newIsSoundEnabled,
@@ -319,6 +358,19 @@
                         _cyclesUntilLongBreak = _isLoopingEnabled ? 4 : 1;
                         // Cập nhật trạng thái âm thanh tại đây
                         _isSoundEnabled = _newIsSoundEnabled;
+                        if (_isTimerRunning) {
+                        _pauseTimer(); // Dừng thời gian nếu đang chạy
+                      }
+
+                      // Reset lại thời gian dựa trên chế độ đang chọn
+                      if (_isPomodoroSelected) {
+                        _remainingTime = _pomodoroDuration * 60;
+                      } else if (_isShortBreakSelected) {
+                        _remainingTime = _shortBreakDuration * 60;
+                      } else if (_isLongBreakSelected) {
+                        _remainingTime = _longBreakDuration * 60;
+                      }
+                    
                       });
                     },
                     child: Text('OK'),

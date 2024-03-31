@@ -37,7 +37,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/tieng-chuong-het-gio-het-thoi-gian-trong-powerpoint-www_tiengdong_com.mp3
-    - assets/Tieng-chim-hot-buoi-sang-www_tiengdong_com.mp3
+    - assets/Tieng-chim-hot-buoi-sang-www_tiengdong_com(mp3cut.net).mp3
 dev_dependencies:
   flutter_test:
     sdk: flutter
