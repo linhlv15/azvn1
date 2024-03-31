@@ -41,6 +41,8 @@
     bool _isLongBreakSelected = false;
     bool _isTimerRunning = false;
     bool _isLoopCompleted = false;
+    int _completedPomodoros = 0;
+
 
   late AudioPlayer _audioPlayer;
 
@@ -150,6 +152,7 @@ void _resumeTimer() {
     // Nếu vòng lặp được bật
     if (_isWorking) {
       _completedCycles++;
+      _completedPomodoros++;
       if (_completedCycles >= _cyclesUntilLongBreak) {
         _isWorking = false;
         _currentBreakDuration = _longBreakDuration * 60;
@@ -172,6 +175,7 @@ void _resumeTimer() {
         // Nếu vòng lặp đã hoàn thành, dừng đồng hồ
         _isTimerRunning = false;
         _resetTimer();
+        _completedPomodoros = 0;
       } else {
         _isWorking = true;
         _remainingTime = _pomodoroDuration * 60;
@@ -185,6 +189,7 @@ void _resumeTimer() {
     // Nếu vòng lặp được tắt
     _isTimerRunning = false;
     _resetTimer();
+    _completedPomodoros = 0;
     
     // Cập nhật trạng thái của các nút
     setState(() {
@@ -302,6 +307,9 @@ void _resumeTimer() {
                                     onChanged: (value) {
                                       setState(() {
                                         _isLoopingEnabled = value;
+                                        if (!_isLoopingEnabled) {
+                                            _completedPomodoros = 0;
+                                        }
                                       });
                                     },
                                   ),
@@ -328,7 +336,7 @@ void _resumeTimer() {
                                     ),
                                     ),
                                   SwitchListTile(
-                                    title: Text('Enable Sound'),
+                                    title: Text('Play sound when timer finishes'),
                                     value: _newIsSoundEnabled,
                                     onChanged: (value) {
                                       setState(() {
@@ -428,6 +436,14 @@ void _resumeTimer() {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                SizedBox(height: 20),
+            Text(
+              'Completed Pomodoros: $_completedPomodoros',
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.white,
+              ),
+            ),
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _isTimerRunning
