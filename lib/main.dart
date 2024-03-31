@@ -269,19 +269,7 @@
                                 ],
                               ),
                             ),
-                            SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  SwitchListTile(
-                                    title: Text('Enable Sound'),
-                                    value: _newIsSoundEnabled,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _newIsSoundEnabled = value;
-                                      });
-                                    },
-                                    ),
-                                    Material(
+                            Material(
                                     child: DropdownButton<String>(
                                       value: _selectedSoundFile,
                                       onChanged: (value) {
@@ -297,6 +285,19 @@
                                       }).toList(),
                                     ),
                                     ),
+                            SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  SwitchListTile(
+                                    title: Text('Enable Sound'),
+                                    value: _newIsSoundEnabled,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _newIsSoundEnabled = value;
+                                      });
+                                    },
+                                    ),
+                                    
                                   // Thêm các tùy chọn âm thanh khác tại đây
                                 ],
                               ),
